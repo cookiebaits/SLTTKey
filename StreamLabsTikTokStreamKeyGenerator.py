@@ -64,16 +64,28 @@ class StreamApp(QMainWindow):
         self._restore_local_btn.connect(self._do_restore_local_btn)
         self._restore_online_btn.connect(self._do_restore_online_btn)
 
+    def get_resource_path(self, relative_path):
+        """ Get absolute path to resource, works for dev and for Nuitka/PyInstaller """
+        try:
+            # Nuitka stores data files in the same directory as the executable in onefile mode
+            # or in the app directory in standalone mode.
+            base_path = os.path.dirname(os.path.abspath(sys.argv[0]))
+        except Exception:
+            base_path = os.path.abspath(".")
+
+        return os.path.join(base_path, relative_path)
+
     def init_ui(self):
         self.setWindowTitle("StreamLabs TikTok Stream Key Generator")
         self.setMinimumSize(800, 600)
 
         # Load stylesheet
         try:
-            with open("styles.qss", "r") as f:
+            style_path = self.get_resource_path("styles.qss")
+            with open(style_path, "r") as f:
                 self.setStyleSheet(f.read())
         except Exception as e:
-            logger.error(f"Could not load styles.qss: {e}")
+            logger.error(f"Could not load styles.qss from {style_path if 'style_path' in locals() else 'unknown'}: {e}")
 
         main_widget = QWidget()
         main_layout = QHBoxLayout()
@@ -328,8 +340,9 @@ class StreamApp(QMainWindow):
         self.go_live_btn.setEnabled(bool(self.token_entry.text()))
 
     def load_config(self):
+        config_path = self.get_resource_path("config.json")
         try:
-            with open("config.json", "r") as file:
+            with open(config_path, "r") as file:
                 data = json.load(file)
         except:
             data = {}
@@ -349,8 +362,13 @@ class StreamApp(QMainWindow):
             "token": self.token_entry.text(),
             "suppress_donation_reminder": self.suppress_donation_reminder
         }
-        with open("config.json", "w") as file:
-            json.dump(data, file)
+        config_path = self.get_resource_path("config.json")
+        try:
+            with open(config_path, "w") as file:
+                json.dump(data, file)
+        except Exception as e:
+            logger.error(f"Failed to save config: {e}")
+
         if show_message:
             QMessageBox.information(self, "Config Saved", "Configuration saved successfully!")
 

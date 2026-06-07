@@ -35,6 +35,11 @@ This application is built with security in mind:
 2. Install requirements: `pip install -r requirements.txt`
 3. Run the app: `python StreamLabsTikTokStreamKeyGenerator.py`
 
+### Building Standalone Executable (Windows)
+1. Install requirements: `pip install -r requirements.txt`
+2. Run the build script: `python build.py`
+3. The standalone `.exe` will be generated in the `dist` folder.
+
 ### Docker Deployment via Dokploy
 The project includes a `Dockerfile` and `docker-compose.yml` for easy deployment in containerized environments.
 
