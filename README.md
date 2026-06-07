@@ -28,7 +28,9 @@ This application is built with security in mind:
 
 ### Windows (Quick Start)
 1. Download the repository.
-2. Double-click `setup_and_run.bat`. This will automatically set up a virtual environment, install dependencies, and launch the app.
+2. Double-click `setup_and_run.bat`.
+3. Select **Option 1** to run the app or **Option 2** to build a standalone `.exe`.
+   - *Note: Python 3.4 - 3.13 is supported.*
 
 ### Standard Deployment (Linux/macOS/Manual)
 1. (Optional but recommended) Create a virtual environment: `python -m venv venv` and activate it.

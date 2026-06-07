@@ -3,12 +3,22 @@ import sys
 import subprocess
 import platform
 
+def install_dependencies():
+    print("Checking and installing build dependencies...")
+    try:
+        subprocess.run([sys.executable, "-m", "pip", "install", "-r", "requirements.txt"], check=True)
+    except subprocess.CalledProcessError as e:
+        print(f"Failed to install dependencies: {e}")
+        sys.exit(1)
+
 def build_windows():
     if platform.system() != "Windows":
         print("Error: build.py for Windows must be run on a Windows machine.")
         sys.exit(1)
 
-    print("Starting build process for Windows...")
+    install_dependencies()
+
+    print("\nStarting build process for Windows...")
 
     # Nuitka command
     command = [
