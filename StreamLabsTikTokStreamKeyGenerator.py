@@ -6,6 +6,7 @@ import sys
 import json
 import threading
 import traceback
+import logging
 from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                               QGroupBox, QPushButton, QLineEdit, QLabel, QCheckBox,
                               QListWidget, QMessageBox, QListWidgetItem, QSizePolicy)
@@ -15,6 +16,17 @@ from Stream import Stream
 from TokenRetriever import TokenRetriever
 from Updater import VersionChecker
 from packaging import version
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler("app.log"),
+        logging.StreamHandler(sys.stdout)
+    ]
+)
+logger = logging.getLogger(__name__)
 
 class StreamApp(QMainWindow):
     update_suggestions = Signal(list)
@@ -48,13 +60,23 @@ class StreamApp(QMainWindow):
         self.setWindowTitle("StreamLabs TikTok Stream Key Generator")
         self.setMinimumSize(800, 600)
 
+        # Load stylesheet
+        try:
+            with open("styles.qss", "r") as f:
+                self.setStyleSheet(f.read())
+        except Exception as e:
+            logger.error(f"Could not load styles.qss: {e}")
+
         main_widget = QWidget()
         main_layout = QHBoxLayout()
+        main_layout.setSpacing(10)
+        main_layout.setContentsMargins(15, 15, 15, 15)
         main_widget.setLayout(main_layout)
         self.setCentralWidget(main_widget)
 
         # Left column
         left_column = QVBoxLayout()
+        left_column.setSpacing(10)
         main_layout.addLayout(left_column)
 
         # Token Section
@@ -63,8 +85,8 @@ class StreamApp(QMainWindow):
         left_column.addWidget(token_group)
 
         token_layout = QVBoxLayout()
-        token_layout.setContentsMargins(8, 12, 8, 8)
-        token_layout.setSpacing(6)
+        token_layout.setContentsMargins(15, 20, 15, 15)
+        token_layout.setSpacing(10)
         token_group.setLayout(token_layout)
 
         # Token Entry Row
@@ -108,20 +130,6 @@ class StreamApp(QMainWindow):
         load_buttons_row.addWidget(self.load_online_btn)
 
         token_layout.addLayout(load_buttons_row)
-
-        # Binary Location Input Row
-        if platform.system() == "Linux":
-            binary_row = QHBoxLayout()
-            binary_row.setSpacing(5)
-
-            self.binary_location_entry = QLineEdit()
-            self.binary_location_entry.setPlaceholderText("Custom Chrome binary path (optional)")
-            self.binary_location_entry.setFixedHeight(28)
-            self.binary_location_entry.setToolTip("Leave empty to auto-detect Chrome path on Linux")
-            binary_row.addWidget(self.binary_location_entry)
-            
-            token_layout.addLayout(binary_row)
-
 
         # Account Info Section
         account_info_label = QLabel("Account Information")
@@ -178,8 +186,8 @@ class StreamApp(QMainWindow):
         stream_group = QGroupBox("Stream Details")
         left_column.addWidget(stream_group)
         stream_layout = QVBoxLayout()
-        stream_layout.setContentsMargins(8, 8, 8, 8)  # Left, Top, Right, Bottom margins
-        stream_layout.setSpacing(5)  # Reduced spacing between widgets
+        stream_layout.setContentsMargins(15, 15, 15, 15)
+        stream_layout.setSpacing(10)
         stream_group.setLayout(stream_layout)
 
         # Stream Title
@@ -216,28 +224,30 @@ class StreamApp(QMainWindow):
 
         # Right column (Controls)
         control_group = QGroupBox("Stream Control")
-        control_group.setMinimumWidth(250)  # Set a minimum width for the control column
+        control_group.setMinimumWidth(250)
         main_layout.addWidget(control_group)
 
         control_layout = QVBoxLayout()
-        control_layout.setContentsMargins(8, 12, 8, 8)  # Tighter margins
-        control_layout.setSpacing(6)  # Reduced spacing between widgets
+        control_layout.setContentsMargins(15, 20, 15, 15)
+        control_layout.setSpacing(10)
         control_group.setLayout(control_layout)
 
         # Buttons row
         button_row = QHBoxLayout()
-        button_row.setSpacing(5)  # Tight spacing between buttons
+        button_row.setSpacing(10)
 
         self.go_live_btn = QPushButton("Go Live")
+        self.go_live_btn.setObjectName("go_live_btn")
         self.go_live_btn.setEnabled(False)
         self.go_live_btn.clicked.connect(self.start_stream)
-        self.go_live_btn.setFixedHeight(32)  # Consistent button height
+        self.go_live_btn.setFixedHeight(35)
         button_row.addWidget(self.go_live_btn)
 
         self.end_live_btn = QPushButton("End Live")
+        self.end_live_btn.setObjectName("end_live_btn")
         self.end_live_btn.setEnabled(False)
         self.end_live_btn.clicked.connect(self.end_stream)
-        self.end_live_btn.setFixedHeight(32)
+        self.end_live_btn.setFixedHeight(35)
         button_row.addWidget(self.end_live_btn)
 
         control_layout.addLayout(button_row)
@@ -385,7 +395,8 @@ class StreamApp(QMainWindow):
             try:
                 token = self._find_local_token()
             except Exception as e:
-                print(traceback.format_exc())
+                logger.debug(traceback.format_exc())
+                logger.error(f"Error loading local token: {e}")
                 self._token_error.emit(f"Unexpected error: {e}")
                 return
             finally:
@@ -429,7 +440,7 @@ class StreamApp(QMainWindow):
                 if matches:
                     return matches[-1]
             except Exception as e:
-                print(f"Error reading {file}: {e}")
+                logger.error(f"Error reading {file}: {e}")
 
         return None
 
@@ -443,7 +454,8 @@ class StreamApp(QMainWindow):
             try:
                 token = retriever.retrieve_token()
             except Exception as e:
-                print(traceback.format_exc())
+                logger.debug(traceback.format_exc())
+                logger.error(f"Error fetching online token: {e}")
                 self._token_error.emit(f"Unexpected error: {e}")
                 return
             finally:
@@ -458,6 +470,12 @@ class StreamApp(QMainWindow):
 
     def _apply_token(self, token: str):
         """Apply a freshly retrieved token — always called on the GUI thread."""
+        if not isinstance(token, str) or not token.strip():
+            logger.error("Attempted to apply an invalid or empty token.")
+            self._token_error.emit("Invalid token received.")
+            return
+
+        logger.info("Applying new API token.")
         self.token_entry.setText(token)
         self.stream = Stream(token)
         self.load_account_info()

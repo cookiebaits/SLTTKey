@@ -1,7 +1,9 @@
 from _version import __version__
 from packaging import version
 import requests
+import logging
 
+logger = logging.getLogger(__name__)
 
 class VersionChecker:
     REPO = "Loukious/StreamlabsTikTokStreamKeyGenerator"
@@ -23,5 +25,6 @@ class VersionChecker:
                     "url": release["html_url"],
                     "notes": release.get("body", "")
                 }
-        except Exception:
+        except Exception as e:
+            logger.error(f"Failed to check for updates: {e}")
             return None

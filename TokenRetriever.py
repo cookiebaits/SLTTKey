@@ -5,15 +5,23 @@ import base64
 import socket
 import threading
 import webbrowser
+import logging
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from urllib.parse import urlparse, parse_qs
 import requests
 
+logger = logging.getLogger(__name__)
 
 class TokenRetriever:
+    """
+    Handles the retrieval of Streamlabs OAuth tokens using PKCE (Proof Key for Code Exchange).
+    """
     STREAMLABS_API_URL = "https://streamlabs.com/api/v5/slobs/auth/data"
 
     def __init__(self):
+        """
+        Initializes the TokenRetriever with a new code verifier and challenge.
+        """
         self.code_verifier = self._generate_code_verifier()
         self.code_challenge = self._generate_code_challenge(self.code_verifier)
         self._auth_code: str | None = None
@@ -25,12 +33,25 @@ class TokenRetriever:
 
     @staticmethod
     def _generate_code_verifier() -> str:
-        """64-byte hex string (128 hex chars) used as the PKCE verifier."""
+        """
+        Generates a random 64-byte hex string to be used as the PKCE verifier.
+
+        Returns:
+            str: A 128-character hex string.
+        """
         return os.urandom(64).hex()
 
     @staticmethod
     def _generate_code_challenge(verifier: str) -> str:
-        """SHA-256 of the verifier, base64url-encoded (no padding)."""
+        """
+        Generates a PKCE code challenge from the given verifier.
+
+        Args:
+            verifier (str): The PKCE verifier string.
+
+        Returns:
+            str: The base64url-encoded SHA-256 hash of the verifier.
+        """
         digest = hashlib.sha256(verifier.encode()).digest()
         return base64.urlsafe_b64encode(digest).decode().rstrip("=")
 
@@ -40,7 +61,12 @@ class TokenRetriever:
 
     @staticmethod
     def _find_free_port() -> int:
-        """Bind to port 0 and let the OS pick a free ephemeral port."""
+        """
+        Finds a free ephemeral port by binding to port 0.
+
+        Returns:
+            int: A free port number.
+        """
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.bind(("127.0.0.1", 0))
             return s.getsockname()[1]
@@ -83,6 +109,15 @@ class TokenRetriever:
         return _CallbackHandler
 
     def _start_callback_server(self, port: int) -> HTTPServer:
+        """
+        Starts a local HTTP server to listen for the OAuth callback.
+
+        Args:
+            port (int): The port to listen on.
+
+        Returns:
+            HTTPServer: The started HTTP server instance.
+        """
         server = HTTPServer(("127.0.0.1", port), self._make_handler())
         thread = threading.Thread(target=server.serve_forever, daemon=True)
         thread.start()
@@ -98,10 +133,10 @@ class TokenRetriever:
         the OAuth callback on a local server, then exchange the code for a token.
 
         Args:
-            timeout: seconds to wait for the user to complete login (default 5 min)
+            timeout (int): seconds to wait for the user to complete login (default 5 min)
 
         Returns:
-            The oauth_token string on success, or None on failure.
+            str | None: The oauth_token string on success, or None on failure.
         """
         port = self._find_free_port()
 
@@ -114,18 +149,18 @@ class TokenRetriever:
 
         server = self._start_callback_server(port)
 
-        print(f"Opening browser for Streamlabs login (callback on port {port})…")
+        logger.info(f"Opening browser for Streamlabs login (callback on port {port})…")
         webbrowser.open(auth_url)
 
         completed = self._server_event.wait(timeout=timeout)
         threading.Thread(target=server.shutdown, daemon=True).start()
 
         if not completed:
-            print("Timed out waiting for the user to complete login.")
+            logger.error("Timed out waiting for the user to complete login.")
             return None
 
         if not self._auth_code:
-            print("Callback received but no auth code was present.")
+            logger.error("Callback received but no auth code was present.")
             return None
 
         return self._exchange_code_for_token(self._auth_code)
@@ -135,7 +170,15 @@ class TokenRetriever:
     # ------------------------------------------------------------------ #
 
     def _exchange_code_for_token(self, code: str) -> str | None:
-        """POST the auth code + verifier to Streamlabs and return the oauth_token."""
+        """
+        Exchanges the authorization code for an OAuth token.
+
+        Args:
+            code (str): The authorization code received from the callback.
+
+        Returns:
+            str | None: The OAuth token if successful, None otherwise.
+        """
         headers = {
             "User-Agent": (
                 "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -162,23 +205,23 @@ class TokenRetriever:
                 timeout=30,
             )
         except requests.RequestException as e:
-            print(f"Network error during token exchange: {e}")
+            logger.error(f"Network error during token exchange: {e}")
             return None
 
         if response.status_code != 200:
-            print(f"Token exchange failed: HTTP {response.status_code} — {response.text}")
+            logger.error(f"Token exchange failed: HTTP {response.status_code} — {response.text}")
             return None
 
         try:
             data = response.json()
         except json.JSONDecodeError:
-            print("Token exchange returned non-JSON response.")
+            logger.error("Token exchange returned non-JSON response.")
             return None
 
         if not data.get("success"):
-            print(f"Streamlabs reported failure: {data}")
+            logger.error(f"Streamlabs reported failure: {data}")
             return None
 
         token = data["data"].get("oauth_token")
-        print(f"Got Streamlabs OAuth token: {token}")
+        logger.info("Successfully obtained Streamlabs OAuth token.")
         return token

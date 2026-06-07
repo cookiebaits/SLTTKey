@@ -1,0 +1,8 @@
+services:
+  app:
+    build: .
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix
+    environment:
+      - DISPLAY=${DISPLAY:-:0}
+    network_mode: host # Needed for the OAuth callback on localhost
