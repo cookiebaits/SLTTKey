@@ -7,15 +7,23 @@ import json
 import threading
 import traceback
 import logging
-from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-                              QGroupBox, QPushButton, QLineEdit, QLabel, QCheckBox,
-                              QListWidget, QMessageBox, QListWidgetItem, QSizePolicy)
-from PySide6.QtCore import Signal, QTimer
-from PySide6.QtGui import QDesktopServices
+
+# Early check for dependencies
+try:
+    from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
+                                  QGroupBox, QPushButton, QLineEdit, QLabel, QCheckBox,
+                                  QListWidget, QMessageBox, QListWidgetItem, QSizePolicy)
+    from PySide6.QtCore import Signal, QTimer
+    from PySide6.QtGui import QDesktopServices
+    from packaging import version
+except ImportError as e:
+    print(f"Error: Missing dependency: {e}")
+    print("Please run 'pip install -r requirements.txt' or use 'setup_and_run.bat' on Windows.")
+    sys.exit(1)
+
 from Stream import Stream
 from TokenRetriever import TokenRetriever
 from Updater import VersionChecker
-from packaging import version
 
 # Configure logging
 logging.basicConfig(

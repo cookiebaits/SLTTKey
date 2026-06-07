@@ -26,9 +26,14 @@ This application is built with security in mind:
 
 ## Deployment
 
-### Standard Deployment (Ubuntu/Standard OS)
-1. Install requirements: `pip install -r requirements.txt`
-2. Run the app: `python StreamLabsTikTokStreamKeyGenerator.py`
+### Windows (Quick Start)
+1. Download the repository.
+2. Double-click `setup_and_run.bat`. This will automatically set up a virtual environment, install dependencies, and launch the app.
+
+### Standard Deployment (Linux/macOS/Manual)
+1. (Optional but recommended) Create a virtual environment: `python -m venv venv` and activate it.
+2. Install requirements: `pip install -r requirements.txt`
+3. Run the app: `python StreamLabsTikTokStreamKeyGenerator.py`
 
 ### Docker Deployment via Dokploy
 The project includes a `Dockerfile` and `docker-compose.yml` for easy deployment in containerized environments.
@@ -56,6 +61,11 @@ The project includes a `Dockerfile` and `docker-compose.yml` for easy deployment
 With [this](https://github.com/Loukious/obs-multi-rtmp) plugin, you can use your streamlabs token to stream directly to TikTok by saving it only once.
 
 ## FAQ
+### I'm getting `ModuleNotFoundError: No module named 'PySide6'` (or similar).
+This means the required libraries are not installed.
+- **Windows:** Use `setup_and_run.bat` to automate the installation.
+- **Manual:** Run `pip install -r requirements.txt` in your terminal.
+
 ### I'm getting an error when I try to stream. What should I do?
 1. First make sure it's not an issue related to Streamlabs. Try going live using Streamlabs and see if you get the same error.
 2. Check `app.log` for detailed error messages.

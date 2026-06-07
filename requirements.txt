@@ -1,5 +1,5 @@
-PySide6>=6.9.0
-requests>=2.32.3
-nuitka>=2.6.9
-clang>=20.1.0
-packaging>=26.0
+PySide6>=6.0.0
+requests>=2.25.0
+nuitka>=2.0.0
+clang>=13.0.0
+packaging>=21.0
