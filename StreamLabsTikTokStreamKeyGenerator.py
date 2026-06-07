@@ -625,6 +625,15 @@ class StreamApp(QMainWindow):
         self.load_account_info()
 
 if __name__ == "__main__":
+    # Hide console window on Windows when launched directly
+    if platform.system() == "Windows":
+        import ctypes
+        kernel32 = ctypes.WinDLL('kernel32')
+        user32 = ctypes.WinDLL('user32')
+        hWnd = kernel32.GetConsoleWindow()
+        if hWnd != 0:
+            user32.ShowWindow(hWnd, 0)
+
     app = QApplication(sys.argv)
     window = StreamApp()
     window.show()
