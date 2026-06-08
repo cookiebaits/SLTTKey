@@ -1,5 +1,7 @@
 import requests
+import logging
 
+logger = logging.getLogger(__name__)
 
 class Stream:
     def __init__(self, token):
@@ -31,7 +33,7 @@ class Stream:
             self.id = response["id"]
             return response["rtmp"], response["key"]
         except KeyError:
-            print("Error: ", response)
+            logger.error(f"Failed to start stream. Response: {response}")
             return None, None
 
     def end(self):

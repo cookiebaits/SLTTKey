@@ -5,10 +5,13 @@ import base64
 import socket
 import threading
 import webbrowser
+import logging
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from urllib.parse import urlparse, parse_qs
 import requests
 
+
+logger = logging.getLogger(__name__)
 
 class TokenRetriever:
     STREAMLABS_API_URL = "https://streamlabs.com/api/v5/slobs/auth/data"
@@ -114,18 +117,18 @@ class TokenRetriever:
 
         server = self._start_callback_server(port)
 
-        print(f"Opening browser for Streamlabs login (callback on port {port})…")
+        logger.info(f"Opening browser for Streamlabs login (callback on port {port})…")
         webbrowser.open(auth_url)
 
         completed = self._server_event.wait(timeout=timeout)
         threading.Thread(target=server.shutdown, daemon=True).start()
 
         if not completed:
-            print("Timed out waiting for the user to complete login.")
+            logger.warning("Timed out waiting for the user to complete login.")
             return None
 
         if not self._auth_code:
-            print("Callback received but no auth code was present.")
+            logger.error("Callback received but no auth code was present.")
             return None
 
         return self._exchange_code_for_token(self._auth_code)
@@ -162,23 +165,23 @@ class TokenRetriever:
                 timeout=30,
             )
         except requests.RequestException as e:
-            print(f"Network error during token exchange: {e}")
+            logger.error(f"Network error during token exchange: {e}")
             return None
 
         if response.status_code != 200:
-            print(f"Token exchange failed: HTTP {response.status_code} — {response.text}")
+            logger.error(f"Token exchange failed: HTTP {response.status_code} — {response.text}")
             return None
 
         try:
             data = response.json()
         except json.JSONDecodeError:
-            print("Token exchange returned non-JSON response.")
+            logger.error("Token exchange returned non-JSON response.")
             return None
 
         if not data.get("success"):
-            print(f"Streamlabs reported failure: {data}")
+            logger.error(f"Streamlabs reported failure: {data}")
             return None
 
         token = data["data"].get("oauth_token")
-        print(f"Got Streamlabs OAuth token: {token}")
+        logger.info("Got Streamlabs OAuth token.") # Don't log the actual token
         return token

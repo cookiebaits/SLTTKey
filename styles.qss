@@ -1,0 +1,116 @@
+/* Modern Dark Theme for PySide6 */
+QMainWindow {
+    background-color: #121212;
+    color: #e0e0e0;
+}
+
+QWidget {
+    background-color: #121212;
+    color: #e0e0e0;
+    font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 10pt;
+}
+
+QGroupBox {
+    border: 1px solid #333333;
+    border-radius: 6px;
+    margin-top: 1.2em;
+    font-weight: bold;
+    padding: 10px;
+}
+
+QGroupBox::title {
+    subcontrol-origin: margin;
+    left: 10px;
+    padding: 0 3px 0 3px;
+    color: #bb86fc;
+}
+
+QPushButton {
+    background-color: #1f1f1f;
+    border: 1px solid #333333;
+    border-radius: 4px;
+    padding: 5px 15px;
+    color: #e0e0e0;
+}
+
+QPushButton:hover {
+    background-color: #333333;
+    border: 1px solid #bb86fc;
+}
+
+QPushButton:pressed {
+    background-color: #bb86fc;
+    color: #121212;
+}
+
+QPushButton:disabled {
+    background-color: #0c0c0c;
+    color: #555555;
+    border: 1px solid #222222;
+}
+
+QLineEdit {
+    background-color: #1e1e1e;
+    border: 1px solid #333333;
+    border-radius: 4px;
+    padding: 4px;
+    color: #ffffff;
+}
+
+QLineEdit:focus {
+    border: 1px solid #bb86fc;
+}
+
+QListWidget {
+    background-color: #1e1e1e;
+    border: 1px solid #333333;
+    border-radius: 4px;
+}
+
+QListWidget::item {
+    padding: 5px;
+}
+
+QListWidget::item:selected {
+    background-color: #bb86fc;
+    color: #121212;
+}
+
+QLabel {
+    color: #e0e0e0;
+}
+
+QCheckBox {
+    spacing: 5px;
+    color: #e0e0e0;
+}
+
+QCheckBox::indicator {
+    width: 18px;
+    height: 18px;
+}
+
+QCheckBox::indicator:unchecked {
+    border: 1px solid #333333;
+    background-color: #1e1e1e;
+    border-radius: 3px;
+}
+
+QCheckBox::indicator:checked {
+    background-color: #bb86fc;
+    border: 1px solid #bb86fc;
+    border-radius: 3px;
+}
+
+QMessageBox {
+    background-color: #1e1e1e;
+}
+
+QMessageBox QLabel {
+    color: #ffffff;
+}
+
+QMessageBox QPushButton {
+    min-width: 80px;
+}
