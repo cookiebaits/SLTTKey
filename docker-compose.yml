@@ -1,0 +1,9 @@
+services:
+  app:
+    build: .
+    container_name: tiktok-stream-key-gen
+    environment:
+      - QT_QPA_PLATFORM=offscreen
+    restart: unless-stopped
+    ports:
+      - "8080:8080" # Placeholder if a web UI is added later

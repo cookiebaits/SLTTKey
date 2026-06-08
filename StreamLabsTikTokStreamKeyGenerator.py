@@ -6,6 +6,13 @@ import sys
 import json
 import threading
 import traceback
+import logging
+import base64
+import ctypes
+import uuid
+from cryptography.fernet import Fernet
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                               QGroupBox, QPushButton, QLineEdit, QLabel, QCheckBox,
                               QListWidget, QMessageBox, QListWidgetItem, QSizePolicy)
@@ -15,6 +22,16 @@ from Stream import Stream
 from TokenRetriever import TokenRetriever
 from Updater import VersionChecker
 from packaging import version
+
+def get_resource_path(relative_path):
+    """Get absolute path to resource, works for dev and for Nuitka/PyInstaller"""
+    try:
+        # Nuitka/PyInstaller create a temp folder and store path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)
 
 class StreamApp(QMainWindow):
     update_suggestions = Signal(list)
@@ -26,6 +43,7 @@ class StreamApp(QMainWindow):
 
     def __init__(self):
         super().__init__()
+        self._encryption_key = self._generate_key()
         self.stream = None
         self.game_mask_id = ""
         self.init_ui()
@@ -47,6 +65,13 @@ class StreamApp(QMainWindow):
     def init_ui(self):
         self.setWindowTitle("StreamLabs TikTok Stream Key Generator")
         self.setMinimumSize(800, 600)
+
+        # Load Stylesheet
+        try:
+            with open(get_resource_path("styles.qss"), "r") as f:
+                self.setStyleSheet(f.read())
+        except Exception as e:
+            logging.error(f"Failed to load styles.qss: {e}")
 
         main_widget = QWidget()
         main_layout = QHBoxLayout()
@@ -309,13 +334,48 @@ class StreamApp(QMainWindow):
     def handle_token_change(self):
         self.go_live_btn.setEnabled(bool(self.token_entry.text()))
 
+    def _generate_key(self):
+        # Derive a more machine-unique key using the MAC address
+        machine_id = str(uuid.getnode()).encode()
+        password = machine_id + b"TikTokStreamKeyGen_Hardening_Salt"
+        salt = b'TikTok_P0_Security_Salt'
+        kdf = PBKDF2HMAC(
+            algorithm=hashes.SHA256(),
+            length=32,
+            salt=salt,
+            iterations=100000,
+        )
+        return base64.urlsafe_b64encode(kdf.derive(password))
+
+    def _encrypt(self, text):
+        if not text: return ""
+        try:
+            f = Fernet(self._encryption_key)
+            return f.encrypt(text.encode()).decode()
+        except Exception as e:
+            logging.error(f"Encryption error: {e}")
+            return ""
+
+    def _decrypt(self, encrypted_text):
+        if not encrypted_text: return ""
+        try:
+            f = Fernet(self._encryption_key)
+            return f.decrypt(encrypted_text.encode()).decode()
+        except Exception as e:
+            logging.debug(f"Decryption failed (possibly invalid key or data): {e}")
+            return ""
+
     def load_config(self):
         try:
             with open("config.json", "r") as file:
                 data = json.load(file)
         except:
             data = {}
-        self.token_entry.setText(data.get("token", ""))
+
+        encrypted_token = data.get("token", "")
+        decrypted_token = self._decrypt(encrypted_token)
+
+        self.token_entry.setText(decrypted_token)
         self.stream_title.setText(data.get("title", ""))
         self.game_category.setText(data.get("game", ""))
         self.mature_checkbox.setChecked(data.get("audience_type", "0") == "1")
@@ -324,11 +384,12 @@ class StreamApp(QMainWindow):
         self.refresh_account_info()
 
     def save_config(self, show_message=True):
+        encrypted_token = self._encrypt(self.token_entry.text())
         data = {
             "title": self.stream_title.text(),
             "game": self.game_category.text(),
             "audience_type": "1" if self.mature_checkbox.isChecked() else "0",
-            "token": self.token_entry.text(),
+            "token": encrypted_token,
             "suppress_donation_reminder": self.suppress_donation_reminder
         }
         with open("config.json", "w") as file:
@@ -385,7 +446,7 @@ class StreamApp(QMainWindow):
             try:
                 token = self._find_local_token()
             except Exception as e:
-                print(traceback.format_exc())
+                logging.error("Exception occurred", exc_info=True)
                 self._token_error.emit(f"Unexpected error: {e}")
                 return
             finally:
@@ -429,7 +490,7 @@ class StreamApp(QMainWindow):
                 if matches:
                     return matches[-1]
             except Exception as e:
-                print(f"Error reading {file}: {e}")
+                logging.error(f"Error reading {file}: {e}")
 
         return None
 
@@ -443,7 +504,7 @@ class StreamApp(QMainWindow):
             try:
                 token = retriever.retrieve_token()
             except Exception as e:
-                print(traceback.format_exc())
+                logging.error("Exception occurred", exc_info=True)
                 self._token_error.emit(f"Unexpected error: {e}")
                 return
             finally:
@@ -606,7 +667,23 @@ class StreamApp(QMainWindow):
     def handle_ui_update(self):
         self.load_account_info()
 
+def hide_console():
+    """Hide the console window on Windows"""
+    if platform.system() == "Windows":
+        whnd = ctypes.windll.kernel32.GetConsoleWindow()
+        if whnd != 0:
+            ctypes.windll.user32.ShowWindow(whnd, 0)
+
 if __name__ == "__main__":
+    hide_console()
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(levelname)s - %(message)s',
+        handlers=[
+            logging.FileHandler("app.log"),
+            logging.StreamHandler()
+        ]
+    )
     app = QApplication(sys.argv)
     window = StreamApp()
     window.show()
